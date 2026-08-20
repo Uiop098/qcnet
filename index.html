@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Quick Chat</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #0f1115;
+    color: #e6e6e6;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  #setup {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 20px;
+    text-align: center;
+  }
+  #setup h2 { margin-bottom: 4px; }
+  #setup p { color: #9aa0a6; margin-top: 0; font-size: 14px; }
+  #setup input {
+    width: 100%;
+    max-width: 300px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid #2a2d34;
+    background: #1a1d24;
+    color: #fff;
+    font-size: 16px;
+    margin-top: 16px;
+  }
+  #setup button {
+    margin-top: 14px;
+    padding: 12px 24px;
+    border-radius: 10px;
+    border: none;
+    background: #4f8cff;
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  #chat-wrap {
+    display: none;
+    flex-direction: column;
+    height: 100%;
+  }
+  header {
+    padding: 14px 16px;
+    border-bottom: 1px solid #22252b;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #14161b;
+  }
+  header .title { font-weight: 600; font-size: 15px; }
+  header .me { font-size: 12px; color: #9aa0a6; }
+  #messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .msg {
+    max-width: 78%;
+    padding: 9px 13px;
+    border-radius: 14px;
+    font-size: 15px;
+    line-height: 1.4;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+  }
+  .msg .author {
+    font-size: 11px;
+    opacity: 0.6;
+    margin-bottom: 3px;
+  }
+  .mine {
+    align-self: flex-end;
+    background: #4f8cff;
+    color: white;
+    border-bottom-right-radius: 4px;
+  }
+  .theirs {
+    align-self: flex-start;
+    background: #1f2229;
+    color: #e6e6e6;
+    border-bottom-left-radius: 4px;
+  }
+  .ai-msg {
+    align-self: flex-start;
+    background: #24304a;
+    border: 1px solid #3a5aa8;
+    color: #e6e6e6;
+    border-bottom-left-radius: 4px;
+  }
+  .ai-msg .author { color: #7fa6ff; opacity: 1; }
+  .msg img.chat-image {
+    max-width: 100%;
+    max-height: 260px;
+    border-radius: 10px;
+    display: block;
+    margin-top: 4px;
+    cursor: pointer;
+  }
+  .msg audio, .msg video {
+    max-width: 100%;
+    margin-top: 4px;
+    border-radius: 8px;
+  }
+  .file-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 4px;
+    padding: 8px 10px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 10px;
+    text-decoration: none;
+    color: inherit;
+  }
+  .file-card .icon { font-size: 22px; }
+  .file-card .info { display: flex; flex-direction: column; overflow: hidden; }
+  .file-card .fname {
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 180px;
+  }
+  .file-card .fsize { font-size: 11px; opacity: 0.7; }
+  #input-row {
+    display: flex;
+    gap: 8px;
+    padding: 10px;
+    border-top: 1px solid #22252b;
+    background: #14161b;
+    align-items: center;
+  }
+  #input-row input[type="text"] {
+    flex: 1;
+    padding: 12px 14px;
+    border-radius: 20px;
+    border: 1px solid #2a2d34;
+    background: #1a1d24;
+    color: #fff;
+    font-size: 16px;
+    outline: none;
+  }
+  #input-row button {
+    padding: 0 20px;
+    border-radius: 20px;
+    border: none;
+    background: #4f8cff;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  #attachBtn {
+    background: #1f2229;
+    border: 1px solid #2a2d34;
+    color: #e6e6e6;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    font-size: 18px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  #clearBtn, #leaveBtn {
+    background: none;
+    border: none;
+    color: #9aa0a6;
+    font-size: 12px;
+    cursor: pointer;
+    text-decoration: underline;
+    margin-left: 10px;
+  }
+  #status {
+    font-size: 11px;
+    color: #6c7078;
+    text-align: center;
+    padding: 4px;
+  }
+  #uploadProgress {
+    font-size: 12px;
+    color: #4f8cff;
+    text-align: center;
+    padding: 2px;
+    display: none;
+  }
+</style>
+</head>
+<body>
+
+<div id="setup">
+  <h2>Quick Chat</h2>
+  <p>Enter the same room name and any username on both devices.</p>
+  <input id="roomInput" placeholder="Room name (e.g. raj-room-1)" />
+  <input id="nameInput" placeholder="Your name (e.g. phone / pc)" />
+  <button id="joinBtn">Join Chat</button>
+</div>
+
+<div id="chat-wrap">
+  <header>
+    <div>
+      <div class="title" id="roomTitle"></div>
+      <div class="me" id="meLabel"></div>
+    </div>
+    <div>
+      <button id="clearBtn">Clear</button>
+      <button id="leaveBtn">Leave</button>
+    </div>
+  </header>
+  <div id="messages"></div>
+  <div id="uploadProgress">Uploading…</div>
+  <div id="status"></div>
+  <div id="input-row">
+    <button id="attachBtn" title="Attach file">📎</button>
+    <input type="file" id="fileInput" style="display:none"
+      accept=".jpg,.jpeg,.png,.gif,.webp,.svg,.bmp,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.rtf,.mp3,.wav,.ogg,.m4a,.aac,.mp4,.webm,.mov,.mkv,.avi,.zip,.rar,.7z" />
+    <input type="text" id="textInput" placeholder="Type a message… (try @ai your question)" autocomplete="off" />
+    <button id="sendBtn">Send</button>
+  </div>
+</div>
+
+<script>
+// ---- Config ----
+const API_URL = 'api.php';
+const UPLOAD_URL = 'upload.php';
+const POLL_INTERVAL_MS = 2000;
+
+let room = "";
+let me = "";
+let pollTimer = null;
+let lastId = 0;
+let recentHistory = []; // small local buffer of {user, text} for AI context
+
+const setupEl = document.getElementById('setup');
+const chatWrap = document.getElementById('chat-wrap');
+const messagesEl = document.getElementById('messages');
+const roomTitle = document.getElementById('roomTitle');
+const meLabel = document.getElementById('meLabel');
+const statusEl = document.getElementById('status');
+const uploadProgressEl = document.getElementById('uploadProgress');
+const fileInput = document.getElementById('fileInput');
+
+function setStatus(text) {
+  statusEl.textContent = text;
+}
+
+function formatSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+}
+
+function iconForCategory(cat, ext) {
+  if (cat === 'file') {
+    if (['zip','rar','7z'].includes(ext)) return '🗜️';
+    if (['pdf'].includes(ext)) return '📕';
+    if (['doc','docx'].includes(ext)) return '📄';
+    if (['xls','xlsx','csv'].includes(ext)) return '📊';
+    if (['ppt','pptx'].includes(ext)) return '📽️';
+    return '📁';
+  }
+  return '📁';
+}
+
+function buildMessageContent(m) {
+  const container = document.createElement('div');
+
+  if (m.text) {
+    const textDiv = document.createElement('div');
+    textDiv.textContent = m.text;
+    container.appendChild(textDiv);
+  }
+
+  if (m.type === 'file') {
+    if (m.fileCategory === 'image') {
+      const img = document.createElement('img');
+      img.src = m.fileUrl;
+      img.className = 'chat-image';
+      img.alt = m.fileName || 'image';
+      img.addEventListener('click', () => window.open(m.fileUrl, '_blank'));
+      container.appendChild(img);
+    } else if (m.fileCategory === 'audio') {
+      const audio = document.createElement('audio');
+      audio.controls = true;
+      audio.src = m.fileUrl;
+      container.appendChild(audio);
+    } else if (m.fileCategory === 'video') {
+      const video = document.createElement('video');
+      video.controls = true;
+      video.src = m.fileUrl;
+      container.appendChild(video);
+    } else {
+      const link = document.createElement('a');
+      link.href = m.fileUrl;
+      link.className = 'file-card';
+      link.target = '_blank';
+      link.download = m.fileName || '';
+
+      const icon = document.createElement('div');
+      icon.className = 'icon';
+      icon.textContent = iconForCategory(m.fileCategory, m.fileExt);
+
+      const info = document.createElement('div');
+      info.className = 'info';
+      const fname = document.createElement('div');
+      fname.className = 'fname';
+      fname.textContent = m.fileName || 'file';
+      const fsize = document.createElement('div');
+      fsize.className = 'fsize';
+      fsize.textContent = formatSize(m.fileSize || 0);
+      info.appendChild(fname);
+      info.appendChild(fsize);
+
+      link.appendChild(icon);
+      link.appendChild(info);
+      container.appendChild(link);
+    }
+  }
+
+  return container;
+}
+
+function appendMessage(m) {
+  const div = document.createElement('div');
+  if (m.user === 'AI Assistant') {
+    div.className = 'msg ai-msg';
+  } else {
+    div.className = 'msg ' + (m.user === me ? 'mine' : 'theirs');
+  }
+  const authorDiv = document.createElement('div');
+  authorDiv.className = 'author';
+  authorDiv.textContent = m.user === me ? 'You' : (m.user === 'AI Assistant' ? '🤖 AI Assistant' : m.user);
+  div.appendChild(authorDiv);
+  div.appendChild(buildMessageContent(m));
+  messagesEl.appendChild(div);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+  if (m.id > lastId) lastId = m.id;
+
+  if (m.type === 'text' && m.text) {
+    recentHistory.push({ user: m.user, text: m.text });
+    if (recentHistory.length > 8) recentHistory.shift();
+  }
+}
+
+async function fetchAll() {
+  try {
+    const res = await fetch(`${API_URL}?room=${encodeURIComponent(room)}`);
+    const data = await res.json();
+    if (data.ok) {
+      messagesEl.innerHTML = '';
+      lastId = 0;
+      recentHistory = [];
+      data.messages.forEach(appendMessage);
+      setStatus('Connected');
+    } else {
+      setStatus('Error loading messages');
+    }
+  } catch (e) {
+    setStatus('Cannot reach server — check hosting/URL');
+  }
+}
+
+async function poll() {
+  try {
+    const res = await fetch(`${API_URL}?room=${encodeURIComponent(room)}&since=${lastId}`);
+    const data = await res.json();
+    if (data.ok && data.messages.length > 0) {
+      data.messages.forEach(appendMessage);
+    }
+    setStatus('Connected');
+  } catch (e) {
+    setStatus('Connection lost, retrying…');
+  }
+}
+
+function extractAiPrompt(text) {
+  const match = text.match(/^(@ai|\/ai)\s+([\s\S]+)/i);
+  return match ? match[2].trim() : null;
+}
+
+async function askAi(prompt) {
+  const thinkingDiv = document.createElement('div');
+  thinkingDiv.className = 'msg ai-msg';
+  thinkingDiv.id = 'ai-thinking';
+  thinkingDiv.innerHTML = '<div class="author">🤖 AI Assistant</div><div>Thinking…</div>';
+  messagesEl.appendChild(thinkingDiv);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+
+  const chatMessages = [
+    { role: 'system', content: 'You are a helpful assistant participating in a casual group chat. Keep replies concise and friendly.' },
+  ];
+  recentHistory.forEach(h => {
+    if (h.user === 'AI Assistant') {
+      chatMessages.push({ role: 'assistant', content: h.text });
+    } else {
+      chatMessages.push({ role: 'user', content: h.user + ': ' + h.text });
+    }
+  });
+  chatMessages.push({ role: 'user', content: prompt });
+
+  let replyText = null;
+  let errorMsg = null;
+
+  // Called directly from the browser (not through the PHP backend) so it
+  // works even on hosts that block outgoing server-side requests.
+  try {
+    const res = await fetch('https://api.llm7.io/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer unused',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini-2024-07-18',
+        messages: chatMessages,
+        stream: false,
+      }),
+    });
+    if (!res.ok) {
+      errorMsg = 'AI provider returned HTTP ' + res.status + ' (likely rate-limited — wait a moment and try again)';
+    } else {
+      const data = await res.json();
+      if (data && data.choices && data.choices[0] && data.choices[0].message) {
+        replyText = data.choices[0].message.content.trim();
+      } else {
+        errorMsg = 'Unexpected response from AI provider';
+      }
+    }
+  } catch (e) {
+    errorMsg = 'Could not reach AI provider from this device (network/CORS issue). Try again or check your connection.';
+  }
+
+  const el = document.getElementById('ai-thinking');
+  if (el) el.remove();
+
+  if (!replyText) {
+    alert('AI reply failed: ' + errorMsg);
+    return;
+  }
+
+  // Save the AI's reply through the normal chat API so it syncs to both devices.
+  try {
+    const saveRes = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ room, user: 'AI Assistant', text: replyText }),
+    });
+    const saveData = await saveRes.json();
+    if (saveData.ok) {
+      appendMessage(saveData.message);
+    } else {
+      alert('Got an AI reply but failed to save it to the chat: ' + (saveData.error || 'unknown error'));
+    }
+  } catch (e) {
+    alert('Got an AI reply but failed to save it to the chat — check server connection.');
+  }
+}
+
+async function sendMessage() {
+  const input = document.getElementById('textInput');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ room, user: me, text }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      appendMessage(data.message);
+      const aiPrompt = extractAiPrompt(text);
+      if (aiPrompt) {
+        askAi(aiPrompt);
+      }
+    } else {
+      alert('Failed to send: ' + (data.error || 'unknown error'));
+    }
+  } catch (e) {
+    alert('Failed to send — check connection.');
+  }
+}
+
+async function uploadFile(file) {
+  const formData = new FormData();
+  formData.append('room', room);
+  formData.append('user', me);
+  formData.append('file', file);
+
+  uploadProgressEl.style.display = 'block';
+  uploadProgressEl.textContent = 'Uploading ' + file.name + '…';
+
+  try {
+    const res = await fetch(UPLOAD_URL, {
+      method: 'POST',
+      body: formData,
+    });
+    const data = await res.json();
+    if (data.ok) {
+      appendMessage(data.message);
+    } else {
+      alert('Upload failed: ' + (data.error || 'unknown error'));
+    }
+  } catch (e) {
+    alert('Upload failed — check connection.');
+  } finally {
+    uploadProgressEl.style.display = 'none';
+  }
+}
+
+document.getElementById('joinBtn').addEventListener('click', async () => {
+  const r = document.getElementById('roomInput').value.trim();
+  const n = document.getElementById('nameInput').value.trim();
+  if (!r || !n) {
+    alert('Please enter both a room name and your name.');
+    return;
+  }
+  room = r;
+  me = n;
+  setupEl.style.display = 'none';
+  chatWrap.style.display = 'flex';
+  roomTitle.textContent = 'Room: ' + room;
+  meLabel.textContent = 'You are: ' + me;
+
+  await fetchAll();
+  pollTimer = setInterval(poll, POLL_INTERVAL_MS);
+});
+
+document.getElementById('sendBtn').addEventListener('click', sendMessage);
+document.getElementById('textInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') sendMessage();
+});
+document.getElementById('attachBtn').addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', () => {
+  if (fileInput.files && fileInput.files[0]) {
+    uploadFile(fileInput.files[0]);
+    fileInput.value = '';
+  }
+});
+document.getElementById('clearBtn').addEventListener('click', async () => {
+  if (confirm('Clear all messages and files in this room?')) {
+    await fetch(`${API_URL}?room=${encodeURIComponent(room)}`, { method: 'DELETE' });
+    await fetchAll();
+  }
+});
+document.getElementById('leaveBtn').addEventListener('click', () => {
+  clearInterval(pollTimer);
+  chatWrap.style.display = 'none';
+  setupEl.style.display = 'flex';
+  messagesEl.innerHTML = '';
+  lastId = 0;
+  recentHistory = [];
+});
+</script>
+
+</body>
+</html>
